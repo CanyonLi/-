@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>情侣任务管理器 - 高级版</title>
+  <!-- 引入 TailwindCSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 引入 GSAP 动画库 CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.5/gsap.min.js"></script>
+  <!-- 引入 Vue3 全局构建版本 CDN -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+</head>
+<body class="min-h-screen bg-gray-50">
+  <div id="app" class="max-w-5xl w-full mx-auto p-4 md:p-6">
+    <!-- 全局日期选择器：切换查看不同日期的任务（历史浏览） -->
+    <div class="mb-4 flex flex-col items-center">
+      <label class="mb-2 text-lg font-semibold text-gray-700">当前查看日期：</label>
+      <input type="date" v-model="selectedDate" class="p-2 border rounded" />
+    </div>
+    <!-- 响应式左右分栏 -->
+    <div class="flex flex-col md:flex-row gap-4">
+      <!-- 左侧：🐶🌭 任务区（蓝色主题） -->
+      <div ref="dogColumn" class="flex-1 md:w-1/2 bg-blue-50 rounded-lg p-4 relative">
+        <h2 class="text-xl font-bold text-blue-700 flex items-center mb-3">🐶🌭 的任务</h2>
+        <!-- 任务列表 -->
+        <ul>
+          <li v-for="(task, index) in filteredTasks('dog')" :key="task.id" class="mb-2 p-2 rounded flex items-start bg-white shadow">
+            <input type="checkbox" v-model="task.completed" @change="completeTask('dog', index)" class="mt-1 mr-2 accent-blue-500" />
+            <div class="flex-1">
+              <div class="flex justify-between items-center">
+                <span class="font-medium" :class="{ 'line-through text-gray-400': task.completed }">{{ task.title }}</span>
+                <span v-if="task.priority" class="text-xs font-semibold px-2 py-1 rounded ml-2"
+                      :class="{
+                        'bg-red-200 text-red-800': task.priority === '高',
+                        'bg-yellow-200 text-yellow-800': task.priority === '中',
+                        'bg-green-200 text-green-800': task.priority === '低'
+                      }">
+                  {{ task.priority }}优先
+                </span>
+              </div>
+              <p class="text-sm text-gray-500">日期: {{ task.date }} {{ task.plannedTime ? '| 计划完成: ' + task.plannedTime : '' }}</p>
+              <p v-if="task.note" class="text-gray-600 text-sm mt-1">备注: {{ task.note }}</p>
+            </div>
+          </li>
+        </ul>
+        <!-- 新增任务表单 -->
+        <div class="mt-4 border-t pt-4">
+          <h3 class="text-lg font-semibold text-blue-700 mb-2">新增任务</h3>
+          <form @submit.prevent="addTask('dog')">
+            <div class="mb-2">
+              <input v-model="newTask.dog.title" type="text" placeholder="任务名称" class="w-full p-2 border rounded" required />
+            </div>
+            <div class="mb-2 flex gap-2">
+              <input v-model="newTask.dog.date" type="date" class="w-1/2 p-2 border rounded" required />
+              <input v-model="newTask.dog.plannedTime" type="time" class="w-1/2 p-2 border rounded" placeholder="完成时间" />
+            </div>
+            <div class="mb-2">
+              <select v-model="newTask.dog.priority" class="w-full p-2 border rounded">
+                <option value="">选择优先级</option>
+                <option value="高">高</option>
+                <option value="中">中</option>
+                <option value="低">低</option>
+              </select>
+            </div>
+            <div class="mb-2">
+              <textarea v-model="newTask.dog.note" placeholder="备注" class="w-full p-2 border rounded"></textarea>
+            </div>
+            <button type="submit" class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">添加任务</button>
+          </form>
+        </div>
+        <!-- 统计信息 -->
+        <div class="mt-6 text-center">
+          <div class="text-sm text-gray-700">完成率: {{ completionRate('dog') }}%</div>
+        </div>
+      </div>
+      <!-- 右侧：🐱🍣 任务区（粉色主题） -->
+      <div ref="catColumn" class="flex-1 md:w-1/2 bg-pink-50 rounded-lg p-4 relative">
+        <h2 class="text-xl font-bold text-pink-700 flex items-center mb-3">🐱🍣 的任务</h2>
+        <ul>
+          <li v-for="(task, index) in filteredTasks('cat')" :key="task.id" class="mb-2 p-2 rounded flex items-start bg-white shadow">
+            <input type="checkbox" v-model="task.completed" @change="completeTask('cat', index)" class="mt-1 mr-2 accent-pink-500" />
+            <div class="flex-1">
+              <div class="flex justify-between items-center">
+                <span class="font-medium" :class="{ 'line-through text-gray-400': task.completed }">{{ task.title }}</span>
+                <span v-if="task.priority" class="text-xs font-semibold px-2 py-1 rounded ml-2"
+                      :class="{
+                        'bg-red-200 text-red-800': task.priority === '高',
+                        'bg-yellow-200 text-yellow-800': task.priority === '中',
+                        'bg-green-200 text-green-800': task.priority === '低'
+                      }">
+                  {{ task.priority }}优先
+                </span>
+              </div>
+              <p class="text-sm text-gray-500">日期: {{ task.date }} {{ task.plannedTime ? '| 计划完成: ' + task.plannedTime : '' }}</p>
+              <p v-if="task.note" class="text-gray-600 text-sm mt-1">备注: {{ task.note }}</p>
+            </div>
+          </li>
+        </ul>
+        <div class="mt-4 border-t pt-4">
+          <h3 class="text-lg font-semibold text-pink-700 mb-2">新增任务</h3>
+          <form @submit.prevent="addTask('cat')">
+            <div class="mb-2">
+              <input v-model="newTask.cat.title" type="text" placeholder="任务名称" class="w-full p-2 border rounded" required />
+            </div>
+            <div class="mb-2 flex gap-2">
+              <input v-model="newTask.cat.date" type="date" class="w-1/2 p-2 border rounded" required />
+              <input v-model="newTask.cat.plannedTime" type="time" class="w-1/2 p-2 border rounded" placeholder="完成时间" />
+            </div>
+            <div class="mb-2">
+              <select v-model="newTask.cat.priority" class="w-full p-2 border rounded">
+                <option value="">选择优先级</option>
+                <option value="高">高</option>
+                <option value="中">中</option>
+                <option value="低">低</option>
+              </select>
+            </div>
+            <div class="mb-2">
+              <textarea v-model="newTask.cat.note" placeholder="备注" class="w-full p-2 border rounded"></textarea>
+            </div>
+            <button type="submit" class="w-full bg-pink-500 text-white p-2 rounded hover:bg-pink-600">添加任务</button>
+          </form>
+        </div>
+        <div class="mt-6 text-center">
+          <div class="text-sm text-gray-700">完成率: {{ completionRate('cat') }}%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vue 应用逻辑 -->
+  <script>
+    const { createApp } = Vue;
+    createApp({
+      data() {
+        return {
+          // 当前全局选中的日期（用于历史浏览），默认今天
+          selectedDate: new Date().toISOString().split('T')[0],
+          // 存储任务，分别为 dog 和 cat 两侧
+          tasks: {
+            dog: [
+              // 示例数据（后续数据可从 localStorage 或数据库加载）
+              { id: 1, title: '散步', date: '2025-03-11', plannedTime: '19:00', priority: '中', note: '晚上一起散步', completed: false },
+              { id: 2, title: '晚餐约会', date: '2025-03-11', plannedTime: '20:00', priority: '高', note: '预约日料', completed: false }
+            ],
+            cat: [
+              { id: 3, title: '购买礼物', date: '2025-03-11', plannedTime: '18:30', priority: '高', note: '给对方一个惊喜', completed: false },
+              { id: 4, title: '整理房间', date: '2025-03-10', plannedTime: '16:00', priority: '低', note: '', completed: false }
+            ]
+          },
+          // 新任务表单数据（每侧独立），默认日期为当前选中的日期
+          newTask: {
+            dog: { title: '', date: new Date().toISOString().split('T')[0], plannedTime: '', priority: '', note: '' },
+            cat: { title: '', date: new Date().toISOString().split('T')[0], plannedTime: '', priority: '', note: '' }
+          }
+        };
+      },
+      methods: {
+        // 根据选中日期和任务日期过滤任务：
+        // 显示当天任务以及之前未完成的任务
+        filteredTasks(side) {
+          return this.tasks[side].filter(task => {
+            // 如果任务日期等于选中日期，显示
+            if (task.date === this.selectedDate) return true;
+            // 如果任务日期小于选中日期且未完成，也显示（自动保留前一天及更早的遗留任务）
+            if (task.date < this.selectedDate && !task.completed) return true;
+            return false;
+          });
+        },
+        // 添加任务：将新任务加入对应侧任务列表，并重置输入
+        addTask(side) {
+          const nt = this.newTask[side];
+          if (!nt.title.trim() || !nt.date) return;
+          const newTaskItem = {
+            id: Date.now(),
+            title: nt.title,
+            date: nt.date,
+            plannedTime: nt.plannedTime,
+            priority: nt.priority,
+            note: nt.note,
+            completed: false
+          };
+          this.tasks[side].push(newTaskItem);
+          // 清空表单，同时默认日期重置为当前选中日期
+          this.newTask[side] = { title: '', date: this.selectedDate, plannedTime: '', priority: '', note: '' };
+          // 这里可以调用保存到 localStorage 或数据库的函数
+        },
+        // 完成任务时触发：如果任务勾选为完成，则播放动画
+        completeTask(side, index) {
+          const task = this.tasks[side][index];
+          if (task.completed) {
+            this.triggerCompletionAnimation(side);
+          }
+          // 这里可以更新任务到 localStorage 或数据库
+        },
+        // 使用 GSAP 触发完成任务时的动画效果
+        triggerCompletionAnimation(side) {
+          const emojiChar = side === 'dog' ? '🐶' : '🐱';
+          const emojiEl = document.createElement('div');
+          emojiEl.textContent = emojiChar;
+          emojiEl.style.position = 'absolute';
+          emojiEl.style.bottom = '20px';
+          emojiEl.style.right = '20px';
+          emojiEl.style.fontSize = '2rem';
+          emojiEl.style.opacity = '0';
+          const container = side === 'dog' ? this.$refs.dogColumn : this.$refs.catColumn;
+          container.appendChild(emojiEl);
+          gsap.to(emojiEl, {
+            y: -80,
+            opacity: 1,
+            duration: 0.5,
+            yoyo: true,
+            repeat: 1,
+            onComplete: () => {
+              container.removeChild(emojiEl);
+            }
+          });
+        },
+        // 计算完成率：已完成任务占比
+        completionRate(side) {
+          const list = this.tasks[side];
+          if (!list.length) return 0;
+          const doneCount = list.filter(t => t.completed).length;
+          return Math.round((doneCount / list.length) * 100);
+        }
+      },
+      // mounted 钩子中可加入 localStorage 数据加载逻辑，确保历史数据不丢失
+      mounted() {
+        // 示例：加载 localStorage 中保存的任务（若存在）
+        const savedTasks = localStorage.getItem('tasks');
+        if (savedTasks) {
+          try {
+            this.tasks = JSON.parse(savedTasks);
+          } catch (e) {
+            console.error('任务数据解析错误', e);
+          }
+        }
+      },
+      watch: {
+        // 每次任务数据变化时自动保存到 localStorage
+        tasks: {
+          handler(newVal) {
+            localStorage.setItem('tasks', JSON.stringify(newVal));
+          },
+          deep: true
+        }
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
