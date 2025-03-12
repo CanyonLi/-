@@ -2,246 +2,145 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>情侣任务管理器 - 高级版</title>
+  <!-- 引入 Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
   <!-- 引入 TailwindCSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- 引入 GSAP 动画库 CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.5/gsap.min.js"></script>
   <!-- 引入 Vue3 全局构建版本 CDN -->
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-  <!-- 引入 Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
-
   <style>
-    /* 
-      1. 背景使用 xiaomao.png，不可移动，居中并保持比例缩放 
-      2. 预留纯色作为背景色，若图片尺寸不够大时作为填充
-    */
+    /* 全局字体及基础样式 */
     body {
-      margin: 0;
-      padding: 0;
-      background: #1b1b1b url("xiaomao.png") no-repeat center center fixed;
-      background-size: contain; /* 同比例缩放 */
-      color: #f2f2f2;           /* 主体文字颜色 */
-      font-family: "Microsoft YaHei", sans-serif;
+      font-family: 'Roboto', sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
     }
-
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 1rem;
+    
+    /* 浅色模式配色变量 */
+    :root {
+      --color-bg: #FFFFFF;
+      --color-text: #333333;
+      --color-primary: #6200EE;
+      --color-secondary: #03DAC6;
+      --color-accent: #FF5252;
     }
-
-    /* 2. 让两个方框居中显示：小屏时上下堆叠，大屏时左右并排 */
-    .columns-container {
-      @apply flex justify-center items-start flex-col md:flex-row gap-4;
+    
+    /* 深色模式变量覆盖 */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --color-bg: #121212;
+        --color-text: #EEEEEE;
+        --color-primary: #BB86FC;
+        --color-secondary: #03DAC6;
+        --color-accent: #CF6679;
+      }
     }
-
-    /* 两列任务区域采用半透明深色区分 */
-    .column {
-      background-color: rgba(255,255,255,0.05);
-      border-radius: 8px;
-      padding: 1rem;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-      width: 100%;
-      max-width: 600px;
+    
+    /* 应用配色 */
+    body {
+      background-color: var(--color-bg);
+      color: var(--color-text);
+      transition: background-color 0.3s, color 0.3s;
     }
-
-    /* 标题颜色区分 */
-    .dog-title {
-      color: #FFD700; /* 金色 */
-    }
-    .cat-title {
-      color: #87CEEB; /* 天蓝色 */
-    }
-
-    /* 任务卡片样式 */
-    .task-card {
-      background-color: #2a2a2a;
-      border-radius: 8px;
-      padding: 12px;
-      margin: 8px 0;
-      position: relative;
-      color: #fff;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
-    }
-    .dog-task {
-      border-left: 6px solid #FFD700;
-    }
-    .cat-task {
-      border-left: 6px solid #87CEEB;
-    }
-    /* 优先级发光效果 */
-    .priority-high {
-      box-shadow: 0 0 8px rgba(255,0,0,0.8);
-    }
-    .priority-medium {
-      box-shadow: 0 0 8px rgba(255,165,0,0.8);
-    }
-    .priority-low {
-      box-shadow: 0 0 8px rgba(0,128,0,0.8);
-    }
-    /* 标签样式 */
-    .tag {
-      display: inline-block;
-      background: #444;
-      color: #fff;
+    
+    /* 自定义按钮样式（覆盖部分 Tailwind 样式） */
+    .btn {
+      padding: 0.5em 1em;
+      border: none;
       border-radius: 4px;
-      padding: 2px 6px;
-      margin-right: 4px;
-      font-size: 0.8em;
+      font-size: 1em;
+      cursor: pointer;
+      transition: background-color 0.2s, transform 0.1s;
     }
-    /* 任务卡片背景图片处理 */
-    .task-card[style*="background-image"] {
-      background-size: cover;
-      background-position: center;
-      text-shadow: 0 0 5px rgba(0,0,0,0.5);
+    .btn-primary {
+      background-color: var(--color-primary);
+      color: #fff;
     }
-
-    /* 3. 输入框文字颜色改为与「任务名称」类似的灰色 #ccc */
-    input[type="text"],
-    input[type="date"],
-    input[type="datetime-local"],
-    textarea {
-      background-color: #ffffff;
-      color: #ccc; /* 改为灰色 */
+    .btn-primary:hover {
+      background-color: #3700B3;
+      transform: translateY(-2px);
     }
-    /* placeholder 也设为同样的灰色 */
-    ::placeholder {
-      color: #ccc;
-    }
-
-    /* 奖励提示 */
-    .reward-popup {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: rgba(255,215,0,0.9);
+    .btn-secondary {
+      background-color: var(--color-secondary);
       color: #000;
-      padding: 10px 16px;
-      border-radius: 8px;
-      font-weight: bold;
-      z-index: 1000;
     }
-
-    /* 简单 confetti 样式 */
-    .confetti {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      animation: confettiFall 3s linear forwards;
-      background: url('https://i.imgur.com/2yaf2wb.png') repeat;
-      opacity: 0.8;
-      z-index: 999;
+    .btn-secondary:hover {
+      background-color: #018786;
     }
-    @keyframes confettiFall {
-      from { transform: translateY(-100%); }
-      to { transform: translateY(100%); }
+    
+    /* 加载动画示例 */
+    .loader {
+      width: 24px;
+      height: 24px;
+      border: 4px solid #ccc;
+      border-top-color: var(--color-primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
     }
-
-    /* Emoji 雨动画容器 */
-    .effect-rain {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: 2000;
-      overflow: hidden;
-      display: none; /* 默认隐藏 */
-    }
-    /* 每个下落的 emoji */
-    .rain-item {
-      position: absolute;
-      font-size: 40px;
-      animation: fall linear;
-    }
-    @keyframes fall {
-      0% {
-        transform: translateY(-100%) rotate(0deg);
-      }
-      100% {
-        transform: translateY(100vh) rotate(720deg);
-      }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
   </style>
 </head>
-<body>
-  <!-- 示例音效（替换为狗叫/猫叫即可） -->
-  <audio id="dogSound" src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" preload="auto"></audio>
-  <audio id="catSound" src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" preload="auto"></audio>
-
-  <div id="app" class="container">
-    <!-- 全局日期选择器（历史浏览） -->
-    <div class="mb-4 text-center">
-      <label class="text-lg font-semibold">当前查看日期：</label>
-      <input type="date" v-model="selectedDate" class="p-2 border rounded" />
+<body class="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 transition-colors duration-300">
+  <div id="app" class="max-w-5xl w-full mx-auto p-4 md:p-6">
+    <!-- 深浅切换按钮 -->
+    <div class="flex justify-end mb-4">
+      <button @click="toggleDarkMode" class="btn btn-secondary">
+        {{ isDark ? '切换到浅色模式' : '切换到深色模式' }}
+      </button>
     </div>
-
-    <!-- 积分显示区域 -->
-    <div class="mb-4 text-center">
-      <span class="text-xl">情侣积分：{{ totalPoints }} 分</span>
+    <!-- 全局日期选择器 -->
+    <div class="mb-4 flex flex-col items-center">
+      <label class="mb-2 text-lg font-semibold">当前查看日期：</label>
+      <input type="date" v-model="selectedDate" class="p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 transition-colors duration-200" />
     </div>
-
-    <!-- AI 任务推荐 -->
-    <div class="mb-4 text-center">
-      <p class="text-lg">AI 推荐: {{ taskRecommendation }}</p>
-    </div>
-
-    <!-- 分栏任务区（居中显示） -->
-    <div class="columns-container">
-      <!-- 小狗任务区 -->
-      <div ref="dogColumn" class="column">
-        <h2 class="text-xl font-bold mb-3 dog-title">🐶 小狗的任务</h2>
-        <div v-for="task in filteredTasks('dog')" :key="task.id" 
-             :class="['task-card', 'dog-task', priorityClass(task.priority)]"
-             :style="task.backgroundUrl ? { backgroundImage: 'url(' + task.backgroundUrl + ')' } : {}">
-          <div class="flex justify-between">
-            <span class="font-medium" :class="{ 'line-through text-gray-400': task.completed }">
-              {{ task.title }}
-            </span>
-            <span v-if="task.priority" class="text-xs font-semibold px-2 py-1 rounded">
-              {{ task.priority }}优先
-            </span>
-          </div>
-          <p class="text-sm">类别：{{ task.category }} | 截止：{{ formatDate(task.dueDate) }}</p>
-          <p v-if="task.tags && task.tags.length" class="text-sm">
-            标签: <span v-for="tag in task.tags" :key="tag" class="tag">{{ tag }}</span>
-          </p>
-          <button @click="completeTask(task)" class="mt-2 px-2 py-1 bg-yellow-600 text-white rounded" :disabled="task.completed">
-            {{ task.completed ? "已完成" : "完成" }}
-          </button>
-          <!-- 上传背景图片 -->
-          <div class="mt-2">
-            <input type="file" @change="uploadBackground(task, $event)" accept="image/*" />
-          </div>
-        </div>
-        <!-- 添加任务表单 -->
-        <div class="mt-4 border-t pt-4">
-          <h3 class="text-lg font-semibold mb-2 dog-title">新增任务</h3>
+    <!-- 响应式左右分栏 -->
+    <div class="flex flex-col md:flex-row gap-4">
+      <!-- 狗狗任务区 -->
+      <div ref="dogColumn" class="flex-1 md:w-1/2 bg-orange-50 dark:bg-orange-800 text-orange-700 dark:text-orange-200 rounded-lg p-4 relative transition-colors duration-200">
+        <h2 class="text-xl font-bold flex items-center mb-3">🐶 的任务</h2>
+        <!-- 任务列表 -->
+        <ul>
+          <li v-for="(task, index) in filteredTasks('dog')" :key="task.id" class="mb-3 p-3 rounded flex items-start bg-white dark:bg-gray-800 shadow transition-all duration-200">
+            <input type="checkbox" v-model="task.completed" @change="completeTask('dog', index)" class="mt-1 mr-2 accent-orange-500" />
+            <div class="flex-1">
+              <div class="flex justify-between items-center">
+                <span class="font-medium" :class="{ 'line-through text-gray-400': task.completed }">{{ task.title }}</span>
+                <span v-if="task.priority" class="text-xs font-semibold px-2 py-1 rounded-full transition-colors duration-200"
+                      :class="{
+                        'bg-red-100 text-red-800 dark:bg-red-300 dark:text-red-900': task.priority === '高',
+                        'bg-yellow-100 text-yellow-800': task.priority === '中',
+                        'bg-green-100 text-green-800': task.priority === '低'
+                      }">
+                  {{ task.priority }}优先
+                </span>
+              </div>
+              <p class="text-sm">
+                📅 日期: {{ task.date }}{{ task.plannedTime ? ' | ⏰ ' + task.plannedTime : '' }}
+              </p>
+              <p v-if="task.note" class="text-sm mt-1">备注: {{ task.note }}</p>
+            </div>
+          </li>
+        </ul>
+        <!-- 新增任务表单 -->
+        <div class="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+          <h3 class="text-lg font-semibold mb-2">新增任务</h3>
           <form @submit.prevent="addTask('dog')">
-            <input v-model="newTask.dog.title" type="text" placeholder="任务名称" class="w-full p-2 border rounded mb-2" required />
-            <textarea v-model="newTask.dog.description" placeholder="任务描述" class="w-full p-2 border rounded mb-2"></textarea>
-            <div class="flex gap-2 mb-2">
-              <input v-model="newTask.dog.dueDate" type="datetime-local" class="w-1/2 p-2 border rounded" />
-              <input v-model="newTask.dog.tags" type="text" placeholder="标签（逗号分隔）" class="w-1/2 p-2 border rounded" />
+            <div class="mb-2">
+              <input v-model="newTask.dog.title" type="text" placeholder="任务名称" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 transition-colors duration-200" required />
             </div>
-            <div class="flex gap-2 mb-2">
-              <select v-model="newTask.dog.category" class="w-1/2 p-2 border rounded">
-                <option value="生活">生活</option>
-                <option value="工作">工作</option>
-                <option value="约会">约会</option>
-                <option value="其他">其他</option>
-              </select>
-              <select v-model="newTask.dog.priority" class="w-1/2 p-2 border rounded">
+            <div class="mb-2 flex gap-2">
+              <input v-model="newTask.dog.date" type="date" class="w-1/2 p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 transition-colors duration-200" required />
+              <input v-model="newTask.dog.plannedTime" type="time" class="w-1/2 p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 transition-colors duration-200" placeholder="完成时间" />
+            </div>
+            <div class="mb-2">
+              <select v-model="newTask.dog.priority" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 transition-colors duration-200">
                 <option value="">选择优先级</option>
                 <option value="高">高</option>
                 <option value="中">中</option>
@@ -249,57 +148,53 @@
               </select>
             </div>
             <div class="mb-2">
-              <button type="submit" class="w-full bg-yellow-500 text-white p-2 rounded hover:bg-yellow-600">添加任务</button>
+              <textarea v-model="newTask.dog.note" placeholder="备注" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 transition-colors duration-200"></textarea>
             </div>
-            <!-- (1) 移除「语音添加任务」按钮 -->
+            <button type="submit" class="w-full btn btn-primary shadow-lg transition-colors duration-200">添加任务</button>
           </form>
         </div>
-      </div>
-
-      <!-- 小猫任务区 -->
-      <div ref="catColumn" class="column">
-        <h2 class="text-xl font-bold mb-3 cat-title">🐱 小猫的任务</h2>
-        <div v-for="task in filteredTasks('cat')" :key="task.id" 
-             :class="['task-card', 'cat-task', priorityClass(task.priority)]"
-             :style="task.backgroundUrl ? { backgroundImage: 'url(' + task.backgroundUrl + ')' } : {}">
-          <div class="flex justify-between">
-            <span class="font-medium" :class="{ 'line-through text-gray-400': task.completed }">
-              {{ task.title }}
-            </span>
-            <span v-if="task.priority" class="text-xs font-semibold px-2 py-1 rounded">
-              {{ task.priority }}优先
-            </span>
-          </div>
-          <p class="text-sm">类别：{{ task.category }} | 截止：{{ formatDate(task.dueDate) }}</p>
-          <p v-if="task.tags && task.tags.length" class="text-sm">
-            标签: <span v-for="tag in task.tags" :key="tag" class="tag">{{ tag }}</span>
-          </p>
-          <button @click="completeTask(task)" class="mt-2 px-2 py-1 bg-blue-600 text-white rounded" :disabled="task.completed">
-            {{ task.completed ? "已完成" : "完成" }}
-          </button>
-          <!-- 上传背景图片 -->
-          <div class="mt-2">
-            <input type="file" @change="uploadBackground(task, $event)" accept="image/*" />
-          </div>
+        <!-- 统计信息 -->
+        <div class="mt-6 text-center">
+          <div class="text-sm">完成率: {{ completionRate('dog') }}%</div>
         </div>
-        <!-- 添加任务表单 -->
-        <div class="mt-4 border-t pt-4">
-          <h3 class="text-lg font-semibold mb-2 cat-title">新增任务</h3>
+      </div>
+      <!-- 猫咪任务区 -->
+      <div ref="catColumn" class="flex-1 md:w-1/2 bg-teal-50 dark:bg-teal-800 text-teal-700 dark:text-teal-200 rounded-lg p-4 relative transition-colors duration-200">
+        <h2 class="text-xl font-bold flex items-center mb-3">🐱 的任务</h2>
+        <ul>
+          <li v-for="(task, index) in filteredTasks('cat')" :key="task.id" class="mb-3 p-3 rounded flex items-start bg-white dark:bg-gray-800 shadow transition-all duration-200">
+            <input type="checkbox" v-model="task.completed" @change="completeTask('cat', index)" class="mt-1 mr-2 accent-teal-500" />
+            <div class="flex-1">
+              <div class="flex justify-between items-center">
+                <span class="font-medium" :class="{ 'line-through text-gray-400': task.completed }">{{ task.title }}</span>
+                <span v-if="task.priority" class="text-xs font-semibold px-2 py-1 rounded-full transition-colors duration-200"
+                      :class="{
+                        'bg-red-100 text-red-800 dark:bg-red-300 dark:text-red-900': task.priority === '高',
+                        'bg-yellow-100 text-yellow-800': task.priority === '中',
+                        'bg-green-100 text-green-800': task.priority === '低'
+                      }">
+                  {{ task.priority }}优先
+                </span>
+              </div>
+              <p class="text-sm">
+                📅 日期: {{ task.date }}{{ task.plannedTime ? ' | ⏰ ' + task.plannedTime : '' }}
+              </p>
+              <p v-if="task.note" class="text-sm mt-1">备注: {{ task.note }}</p>
+            </div>
+          </li>
+        </ul>
+        <div class="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+          <h3 class="text-lg font-semibold mb-2">新增任务</h3>
           <form @submit.prevent="addTask('cat')">
-            <input v-model="newTask.cat.title" type="text" placeholder="任务名称" class="w-full p-2 border rounded mb-2" required />
-            <textarea v-model="newTask.cat.description" placeholder="任务描述" class="w-full p-2 border rounded mb-2"></textarea>
-            <div class="flex gap-2 mb-2">
-              <input v-model="newTask.cat.dueDate" type="datetime-local" class="w-1/2 p-2 border rounded" />
-              <input v-model="newTask.cat.tags" type="text" placeholder="标签（逗号分隔）" class="w-1/2 p-2 border rounded" />
+            <div class="mb-2">
+              <input v-model="newTask.cat.title" type="text" placeholder="任务名称" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 transition-colors duration-200" required />
             </div>
-            <div class="flex gap-2 mb-2">
-              <select v-model="newTask.cat.category" class="w-1/2 p-2 border rounded">
-                <option value="生活">生活</option>
-                <option value="工作">工作</option>
-                <option value="约会">约会</option>
-                <option value="其他">其他</option>
-              </select>
-              <select v-model="newTask.cat.priority" class="w-1/2 p-2 border rounded">
+            <div class="mb-2 flex gap-2">
+              <input v-model="newTask.cat.date" type="date" class="w-1/2 p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 transition-colors duration-200" required />
+              <input v-model="newTask.cat.plannedTime" type="time" class="w-1/2 p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 transition-colors duration-200" placeholder="完成时间" />
+            </div>
+            <div class="mb-2">
+              <select v-model="newTask.cat.priority" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 transition-colors duration-200">
                 <option value="">选择优先级</option>
                 <option value="高">高</option>
                 <option value="中">中</option>
@@ -307,133 +202,81 @@
               </select>
             </div>
             <div class="mb-2">
-              <button type="submit" class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">添加任务</button>
+              <textarea v-model="newTask.cat.note" placeholder="备注" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 transition-colors duration-200"></textarea>
             </div>
-            <!-- (1) 移除「语音添加任务」按钮 -->
+            <button type="submit" class="w-full btn btn-primary shadow-lg transition-colors duration-200">添加任务</button>
           </form>
+        </div>
+        <div class="mt-6 text-center">
+          <div class="text-sm">完成率: {{ completionRate('cat') }}%</div>
         </div>
       </div>
     </div>
-
-    <!-- 奖励弹窗 -->
-    <div v-if="unlockedReward" class="reward-popup">
-      {{ unlockedReward }}
-    </div>
-
-    <!-- Emoji 雨容器 -->
-    <div ref="effectRain" class="effect-rain"></div>
   </div>
 
   <!-- Vue 应用逻辑 -->
   <script>
-    const { createApp, ref, onMounted, inject } = Vue;
-
+    const { createApp } = Vue;
     createApp({
       data() {
         return {
-          // 全局选择日期（用于历史浏览）
+          isDark: false,
           selectedDate: new Date().toISOString().split('T')[0],
-          // 任务数据（将同步自 Firebase Firestore）
-          tasks: [],
-          // 新任务表单数据，分别为 dog 与 cat
-          newTask: {
-            dog: {
-              title: '',
-              description: '',
-              dueDate: '',
-              tags: '',
-              category: '生活',
-              priority: ''
-            },
-            cat: {
-              title: '',
-              description: '',
-              dueDate: '',
-              tags: '',
-              category: '生活',
-              priority: ''
-            }
+          tasks: {
+            dog: [
+              { id: 1, title: '散步', date: '2025-03-11', plannedTime: '19:00', priority: '中', note: '晚上一起散步', completed: false },
+              { id: 2, title: '晚餐约会', date: '2025-03-11', plannedTime: '20:00', priority: '高', note: '预约日料', completed: false }
+            ],
+            cat: [
+              { id: 3, title: '购买礼物', date: '2025-03-11', plannedTime: '18:30', priority: '高', note: '给对方一个惊喜', completed: false },
+              { id: 4, title: '整理房间', date: '2025-03-10', plannedTime: '16:00', priority: '低', note: '', completed: false }
+            ]
           },
-          // 情侣积分
-          totalPoints: 0,
-          // 奖励提示
-          unlockedReward: null,
-          // Rain容器
-          effectRainEl: null
+          newTask: {
+            dog: { title: '', date: new Date().toISOString().split('T')[0], plannedTime: '', priority: '', note: '' },
+            cat: { title: '', date: new Date().toISOString().split('T')[0], plannedTime: '', priority: '', note: '' }
+          }
         };
       },
       methods: {
-        // 返回任务优先级对应的 CSS 类
-        priorityClass(priority) {
-          if (priority === '高') return 'priority-high';
-          if (priority === '中') return 'priority-medium';
-          if (priority === '低') return 'priority-low';
-          return '';
-        },
-        // 格式化日期时间
-        formatDate(dateStr) {
-          return dateStr ? new Date(dateStr).toLocaleString() : '';
-        },
-        // 根据 selectedDate 过滤任务（显示该日期及之前未完成任务）
-        filteredTasks(owner) {
-          return this.tasks.filter(task => {
-            if (task.owner !== owner) return false;
-            if (task.dueDate && task.dueDate.split('T')[0] === this.selectedDate) return true;
-            if (task.dueDate && task.dueDate.split('T')[0] < this.selectedDate && !task.completed) return true;
+        filteredTasks(side) {
+          return this.tasks[side].filter(task => {
+            if (task.date === this.selectedDate) return true;
+            if (task.date < this.selectedDate && !task.completed) return true;
             return false;
           });
         },
-        // 添加任务到 Firestore
-        addTask(owner) {
-          const nt = this.newTask[owner];
-          if (!nt.title.trim()) return;
-          // 处理标签，分隔后去除空格
-          const tagArr = nt.tags ? nt.tags.split(/[,，]\s*/).filter(t => t.trim()) : [];
-          const taskData = {
+        addTask(side) {
+          const nt = this.newTask[side];
+          if (!nt.title.trim() || !nt.date) return;
+          const newTaskItem = {
+            id: Date.now(),
             title: nt.title,
-            description: nt.description,
-            dueDate: nt.dueDate ? new Date(nt.dueDate).toISOString() : null,
-            tags: tagArr,
-            category: nt.category,
+            date: nt.date,
+            plannedTime: nt.plannedTime,
             priority: nt.priority,
-            owner: owner,
+            note: nt.note,
             completed: false
           };
-          // 添加到 Firestore
-          this.db.collection('tasks').add(taskData)
-            .catch(err => {
-              console.error("添加任务到 Firestore 失败:", err);
-            });
-          // 清空表单数据
-          this.newTask[owner] = { title: '', description: '', dueDate: '', tags: '', category: '生活', priority: '' };
+          this.tasks[side].push(newTaskItem);
+          this.newTask[side] = { title: '', date: this.selectedDate, plannedTime: '', priority: '', note: '' };
         },
-        // 标记任务为完成，并更新情侣积分
-        completeTask(task) {
-          if (task.completed) return;
-          this.db.collection('tasks').doc(task.id).update({ completed: true })
-            .catch(err => console.error("更新任务状态失败:", err));
-
-          // 每完成一项任务计 1 分
-          this.totalPoints += 1;
-          this.db.collection('meta').doc('points').set({ value: this.totalPoints });
-
-          this.checkRewards(this.totalPoints);
-
-          // 触发动画和音效
-          const emoji = task.owner === 'dog' ? '🐶' : '🐱';
-          this.triggerCompletionAnimation(task.owner, emoji);
+        completeTask(side, index) {
+          const task = this.tasks[side][index];
+          if (task.completed) {
+            this.triggerCompletionAnimation(side);
+          }
         },
-        // 完成任务时触发的动画：简单弹跳 + Emoji雨 + 音效
-        triggerCompletionAnimation(owner, emoji) {
-          // 1) 角落弹跳
-          const container = owner === 'dog' ? this.$refs.dogColumn : this.$refs.catColumn;
+        triggerCompletionAnimation(side) {
+          const emojiChar = side === 'dog' ? '🐶' : '🐱';
           const emojiEl = document.createElement('div');
-          emojiEl.textContent = emoji;
+          emojiEl.textContent = emojiChar;
           emojiEl.style.position = 'absolute';
           emojiEl.style.bottom = '20px';
           emojiEl.style.right = '20px';
           emojiEl.style.fontSize = '2rem';
           emojiEl.style.opacity = '0';
+          const container = side === 'dog' ? this.$refs.dogColumn : this.$refs.catColumn;
           container.appendChild(emojiEl);
           gsap.to(emojiEl, {
             y: -80,
@@ -445,151 +288,46 @@
               container.removeChild(emojiEl);
             }
           });
-
-          // 2) Emoji雨
-          if (owner === 'dog') {
-            this.startRainEffect('dog');
-            this.playSound('dogSound');
+        },
+        completionRate(side) {
+          const list = this.tasks[side];
+          if (!list.length) return 0;
+          const doneCount = list.filter(t => t.completed).length;
+          return Math.round((doneCount / list.length) * 100);
+        },
+        toggleDarkMode() {
+          this.isDark = !this.isDark;
+          if (this.isDark) {
+            document.documentElement.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
           } else {
-            this.startRainEffect('cat');
-            this.playSound('catSound');
+            document.documentElement.classList.remove('dark');
+            localStorage.setItem('theme', 'light');
           }
-        },
-        // 播放对应音效
-        playSound(soundId) {
-          const audio = document.getElementById(soundId);
-          if (audio) {
-            audio.currentTime = 0; // 从头播放
-            audio.play().catch(err => console.warn("音频播放被阻止:", err));
-          }
-        },
-        // 生成「狗狗+热狗」或「猫咪+寿司」的纯 Emoji 雨
-        startRainEffect(type) {
-          if (!this.effectRainEl) return;
-          this.effectRainEl.style.display = 'block';
-
-          const dogEmojis = ['🐶', '🌭']; 
-          const catEmojis = ['🐱', '🍣'];
-
-          // 生成若干下落元素
-          for (let i = 0; i < 20; i++) {
-            const item = document.createElement('div');
-            item.className = 'rain-item';
-            // 根据类型随机取狗狗/热狗 或 猫咪/寿司
-            if (type === 'dog') {
-              item.innerText = dogEmojis[Math.floor(Math.random() * dogEmojis.length)];
-            } else {
-              item.innerText = catEmojis[Math.floor(Math.random() * catEmojis.length)];
-            }
-            item.style.left = Math.random() * 100 + '%';
-            item.style.animationDuration = 2 + Math.random() * 3 + 's'; // 随机下落速度
-            this.effectRainEl.appendChild(item);
-
-            // 动画结束后移除元素
-            item.addEventListener('animationend', () => {
-              if (item.parentNode) {
-                item.parentNode.removeChild(item);
-              }
-            });
-          }
-
-          // 几秒后自动隐藏容器
-          setTimeout(() => {
-            this.effectRainEl.style.display = 'none';
-          }, 4000);
-        },
-        // 上传任务背景图片
-        uploadBackground(task, event) {
-          const file = event.target.files[0];
-          if (!file) return;
-          const storageRef = this.storage.ref(`task-backgrounds/${task.id}/${file.name}`);
-          storageRef.put(file).then(snapshot => {
-            snapshot.ref.getDownloadURL().then(url => {
-              this.db.collection('tasks').doc(task.id).update({ backgroundUrl: url });
-            });
-          });
-        },
-        // 请求通知权限
-        requestNotificationPermission() {
-          if ('Notification' in window) {
-            Notification.requestPermission().then(permission => {
-              if (permission === 'granted') {
-                console.log('通知权限已授予。');
-              }
-            });
-          }
-        },
-        // 简单 AI 推荐（根据当前任务数据给出建议）
-        getTaskRecommendation() {
-          if (this.tasks.length === 0) return "当前没有任务，快添加一些吧！";
-          const categoryCounts = {};
-          this.tasks.forEach(task => {
-            if (!task.completed) {
-              categoryCounts[task.category] = (categoryCounts[task.category] || 0) + 1;
-            }
-          });
-          let minCategory = null;
-          let minCount = Infinity;
-          for (const [cat, count] of Object.entries(categoryCounts)) {
-            if (count < minCount) {
-              minCategory = cat;
-              minCount = count;
-            }
-          }
-          return minCategory ? `试试增加「${minCategory}」类任务哦~` : "保持良好习惯，加油！";
-        },
-        // 检查积分奖励，并触发奖励动画
-        checkRewards(points) {
-          if (points % 10 === 0) {
-            this.showConfettiAnimation();
-            this.unlockedReward = `🎁 恭喜累计 ${points} 分，奖励已解锁！`;
-            setTimeout(() => { this.unlockedReward = null; }, 5000);
-          }
-        },
-        // 简单 confetti 动画
-        showConfettiAnimation() {
-          const confetti = document.createElement('div');
-          confetti.className = 'confetti';
-          document.body.appendChild(confetti);
-          setTimeout(() => { document.body.removeChild(confetti); }, 3000);
-        }
-      },
-      computed: {
-        taskRecommendation() {
-          return this.getTaskRecommendation();
         }
       },
       mounted() {
-        // 初始化 Firebase：请替换为自己的配置
-        const firebaseConfig = {
-          apiKey: "<YOUR_API_KEY>",
-          authDomain: "<YOUR_PROJECT_ID>.firebaseapp.com",
-          projectId: "<YOUR_PROJECT_ID>",
-          storageBucket: "<YOUR_PROJECT_ID>.appspot.com",
-          messagingSenderId: "<YOUR_MESSAGING_SENDER_ID>",
-          appId: "<YOUR_APP_ID>"
-        };
-        firebase.initializeApp(firebaseConfig);
-        this.db = firebase.firestore();
-        this.storage = firebase.storage();
-
-        // 请求通知权限
-        this.requestNotificationPermission();
-
-        // 监听 Firestore tasks 集合，实现实时同步
-        this.db.collection('tasks').orderBy('dueDate').onSnapshot(snapshot => {
-          this.tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        });
-
-        // 初始化情侣积分（读取 meta/points 文档）
-        this.db.collection('meta').doc('points').get().then(doc => {
-          if (doc.exists) {
-            this.totalPoints = doc.data().value;
+        const savedTasks = localStorage.getItem('tasks');
+        if (savedTasks) {
+          try {
+            this.tasks = JSON.parse(savedTasks);
+          } catch (e) {
+            console.error('任务数据解析错误', e);
           }
-        });
-
-        // 获取满屏雨容器
-        this.effectRainEl = this.$refs.effectRain;
+        }
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+          this.isDark = true;
+          document.documentElement.classList.add('dark');
+        }
+      },
+      watch: {
+        tasks: {
+          handler(newVal) {
+            localStorage.setItem('tasks', JSON.stringify(newVal));
+          },
+          deep: true
+        }
       }
     }).mount('#app');
   </script>
