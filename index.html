@@ -1,335 +1,430 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>情侣任务管理器 - 高级版</title>
-  <!-- 引入 Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-  <!-- 引入 TailwindCSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- 引入 GSAP 动画库 CDN -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.5/gsap.min.js"></script>
-  <!-- 引入 Vue3 全局构建版本 CDN -->
-  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <title>🐱🍣 小猫寿司扫雷 🍣🐱</title>
   <style>
-    /* 全局字体及基础样式 */
+    /* 整体背景与排版 */
     body {
-      font-family: 'Roboto', sans-serif;
-      font-size: 16px;
-      line-height: 1.6;
+      margin: 0;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      background: linear-gradient(135deg, #f6d365, #fda085);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      color: #2c3e50;
     }
-    
-    /* 浅色模式配色变量 */
-    :root {
-      --color-bg: #FFFFFF;
-      --color-text: #333333;
-      --color-primary: #6200EE;
-      --color-secondary: #03DAC6;
-      --color-accent: #FF5252;
+    header {
+      text-align: center;
+      padding: 10px 20px;
     }
-    
-    /* 深色模式变量覆盖 */
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --color-bg: #121212;
-        --color-text: #EEEEEE;
-        --color-primary: #BB86FC;
-        --color-secondary: #03DAC6;
-        --color-accent: #CF6679;
-      }
+    header h1 {
+      margin: 0;
+      font-size: 2rem;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
     }
-    
-    /* 应用配色 */
-    body {
-      background-color: var(--color-bg);
-      color: var(--color-text);
-      transition: background-color 0.3s, color 0.3s;
+    header p {
+      margin: 5px 0 0;
+      font-size: 1rem;
     }
-    
-    /* 自定义按钮样式（覆盖部分 Tailwind 样式） */
-    .btn {
-      padding: 0.5em 1em;
+    /* 控制区：包含难度选择、开始、排行榜、自定义等 */
+    #game-controls {
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 8px;
+      padding: 10px 15px;
+      margin: 10px 0;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    #game-controls select,
+    #game-controls button {
+      padding: 6px 10px;
+      font-size: 1rem;
       border: none;
       border-radius: 4px;
-      font-size: 1em;
       cursor: pointer;
-      transition: background-color 0.2s, transform 0.1s;
+      transition: background-color 0.2s;
     }
-    .btn-primary {
-      background-color: var(--color-primary);
+    #game-controls select {
+      background: #ecf0f1;
+      color: #2c3e50;
+    }
+    #game-controls button {
+      background: #81c784;
       color: #fff;
     }
-    .btn-primary:hover {
-      background-color: #3700B3;
-      transform: translateY(-2px);
+    #game-controls button:hover {
+      background: #66bb6a;
     }
-    .btn-secondary {
-      background-color: var(--color-secondary);
-      color: #000;
+    #game-controls div {
+      font-size: 1rem;
+      margin-top: 5px;
     }
-    .btn-secondary:hover {
-      background-color: #018786;
+    /* 游戏区域 */
+    #board {
+      display: grid;
+      margin: 10px 0;
+      /* 棋盘宽高将在 JS 中根据列数/行数设置 */
+      border: 4px solid #2c3e50;
+      background: #ecf0f1;
     }
-    
-    /* 加载动画示例 */
-    .loader {
-      width: 24px;
-      height: 24px;
-      border: 4px solid #ccc;
-      border-top-color: var(--color-primary);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 0 auto;
+    .cell {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #bdc3c7;
+      cursor: pointer;
+      transition: background-color 0.2s, transform 0.1s;
+      user-select: none;
+      font-weight: bold;
     }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
+    .cell:hover {
+      transform: scale(1.1);
+      background-color: #dcedc1;
+    }
+    .cell.revealed {
+      background-color: #f7f7f7;
+      cursor: default;
+    }
+    .cell.flag {
+      background-color: #ffe0b2;
+    }
+    .cell.mine {
+      background-color: #e57373;
+    }
+    .cell.number {
+      background-color: #f7f7f7;
+    }
+    /* 数字颜色：仿经典扫雷 */
+    .num-1 { color: blue; }
+    .num-2 { color: green; }
+    .num-3 { color: red; }
+    .num-4 { color: darkblue; }
+    .num-5 { color: maroon; }
+    .num-6 { color: teal; }
+    .num-7 { color: black; }
+    .num-8 { color: gray; }
+    /* 帮助提示 */
+    #help {
+      background: rgba(255, 255, 255, 0.8);
+      padding: 8px 12px;
+      border-radius: 4px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      font-size: 0.9rem;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    /* 移动端优化 */
+    @media (max-width: 600px) {
+      .cell { width: 18px; height: 18px; font-size: 0.8rem; }
+      header h1 { font-size: 1.5rem; }
+      #game-controls select, 
+      #game-controls button { font-size: 0.9rem; }
     }
   </style>
 </head>
-<body class="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 transition-colors duration-300">
-  <div id="app" class="max-w-5xl w-full mx-auto p-4 md:p-6">
-    <!-- 深浅切换按钮 -->
-    <div class="flex justify-end mb-4">
-      <button @click="toggleDarkMode" class="btn btn-secondary">
-        {{ isDark ? '切换到浅色模式' : '切换到深色模式' }}
-      </button>
-    </div>
-    <!-- 全局日期选择器 -->
-    <div class="mb-4 flex flex-col items-center">
-      <label class="mb-2 text-lg font-semibold">当前查看日期：</label>
-      <input type="date" v-model="selectedDate" class="p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 transition-colors duration-200" />
-    </div>
-    <!-- 响应式左右分栏 -->
-    <div class="flex flex-col md:flex-row gap-4">
-      <!-- 狗狗任务区 -->
-      <div ref="dogColumn" class="flex-1 md:w-1/2 bg-orange-50 dark:bg-orange-800 text-orange-700 dark:text-orange-200 rounded-lg p-4 relative transition-colors duration-200">
-        <h2 class="text-xl font-bold flex items-center mb-3">🐶 的任务</h2>
-        <!-- 任务列表 -->
-        <ul>
-          <li v-for="(task, index) in filteredTasks('dog')" :key="task.id" class="mb-3 p-3 rounded flex items-start bg-white dark:bg-gray-800 shadow transition-all duration-200">
-            <input type="checkbox" v-model="task.completed" @change="completeTask('dog', index)" class="mt-1 mr-2 accent-orange-500" />
-            <div class="flex-1">
-              <div class="flex justify-between items-center">
-                <span class="font-medium" :class="{ 'line-through text-gray-400': task.completed }">{{ task.title }}</span>
-                <span v-if="task.priority" class="text-xs font-semibold px-2 py-1 rounded-full transition-colors duration-200"
-                      :class="{
-                        'bg-red-100 text-red-800 dark:bg-red-300 dark:text-red-900': task.priority === '高',
-                        'bg-yellow-100 text-yellow-800': task.priority === '中',
-                        'bg-green-100 text-green-800': task.priority === '低'
-                      }">
-                  {{ task.priority }}优先
-                </span>
-              </div>
-              <p class="text-sm">
-                📅 日期: {{ task.date }}{{ task.plannedTime ? ' | ⏰ ' + task.plannedTime : '' }}
-              </p>
-              <p v-if="task.note" class="text-sm mt-1">备注: {{ task.note }}</p>
-            </div>
-          </li>
-        </ul>
-        <!-- 新增任务表单 -->
-        <div class="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
-          <h3 class="text-lg font-semibold mb-2">新增任务</h3>
-          <form @submit.prevent="addTask('dog')">
-            <div class="mb-2">
-              <input v-model="newTask.dog.title" type="text" placeholder="任务名称" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 transition-colors duration-200" required />
-            </div>
-            <div class="mb-2 flex gap-2">
-              <input v-model="newTask.dog.date" type="date" class="w-1/2 p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 transition-colors duration-200" required />
-              <input v-model="newTask.dog.plannedTime" type="time" class="w-1/2 p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 transition-colors duration-200" placeholder="完成时间" />
-            </div>
-            <div class="mb-2">
-              <select v-model="newTask.dog.priority" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 transition-colors duration-200">
-                <option value="">选择优先级</option>
-                <option value="高">高</option>
-                <option value="中">中</option>
-                <option value="低">低</option>
-              </select>
-            </div>
-            <div class="mb-2">
-              <textarea v-model="newTask.dog.note" placeholder="备注" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 transition-colors duration-200"></textarea>
-            </div>
-            <button type="submit" class="w-full btn btn-primary shadow-lg transition-colors duration-200">添加任务</button>
-          </form>
-        </div>
-        <!-- 统计信息 -->
-        <div class="mt-6 text-center">
-          <div class="text-sm">完成率: {{ completionRate('dog') }}%</div>
-        </div>
-      </div>
-      <!-- 猫咪任务区 -->
-      <div ref="catColumn" class="flex-1 md:w-1/2 bg-teal-50 dark:bg-teal-800 text-teal-700 dark:text-teal-200 rounded-lg p-4 relative transition-colors duration-200">
-        <h2 class="text-xl font-bold flex items-center mb-3">🐱 的任务</h2>
-        <ul>
-          <li v-for="(task, index) in filteredTasks('cat')" :key="task.id" class="mb-3 p-3 rounded flex items-start bg-white dark:bg-gray-800 shadow transition-all duration-200">
-            <input type="checkbox" v-model="task.completed" @change="completeTask('cat', index)" class="mt-1 mr-2 accent-teal-500" />
-            <div class="flex-1">
-              <div class="flex justify-between items-center">
-                <span class="font-medium" :class="{ 'line-through text-gray-400': task.completed }">{{ task.title }}</span>
-                <span v-if="task.priority" class="text-xs font-semibold px-2 py-1 rounded-full transition-colors duration-200"
-                      :class="{
-                        'bg-red-100 text-red-800 dark:bg-red-300 dark:text-red-900': task.priority === '高',
-                        'bg-yellow-100 text-yellow-800': task.priority === '中',
-                        'bg-green-100 text-green-800': task.priority === '低'
-                      }">
-                  {{ task.priority }}优先
-                </span>
-              </div>
-              <p class="text-sm">
-                📅 日期: {{ task.date }}{{ task.plannedTime ? ' | ⏰ ' + task.plannedTime : '' }}
-              </p>
-              <p v-if="task.note" class="text-sm mt-1">备注: {{ task.note }}</p>
-            </div>
-          </li>
-        </ul>
-        <div class="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
-          <h3 class="text-lg font-semibold mb-2">新增任务</h3>
-          <form @submit.prevent="addTask('cat')">
-            <div class="mb-2">
-              <input v-model="newTask.cat.title" type="text" placeholder="任务名称" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 transition-colors duration-200" required />
-            </div>
-            <div class="mb-2 flex gap-2">
-              <input v-model="newTask.cat.date" type="date" class="w-1/2 p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 transition-colors duration-200" required />
-              <input v-model="newTask.cat.plannedTime" type="time" class="w-1/2 p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 transition-colors duration-200" placeholder="完成时间" />
-            </div>
-            <div class="mb-2">
-              <select v-model="newTask.cat.priority" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 transition-colors duration-200">
-                <option value="">选择优先级</option>
-                <option value="高">高</option>
-                <option value="中">中</option>
-                <option value="低">低</option>
-              </select>
-            </div>
-            <div class="mb-2">
-              <textarea v-model="newTask.cat.note" placeholder="备注" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 transition-colors duration-200"></textarea>
-            </div>
-            <button type="submit" class="w-full btn btn-primary shadow-lg transition-colors duration-200">添加任务</button>
-          </form>
-        </div>
-        <div class="mt-6 text-center">
-          <div class="text-sm">完成率: {{ completionRate('cat') }}%</div>
-        </div>
-      </div>
+<body>
+  <header>
+    <h1>🐱🍣 小猫寿司扫雷 🍣🐱</h1>
+    <p>体验猫咪与寿司的奇妙组合！</p>
+  </header>
+  <div id="game-controls">
+    <select id="difficulty">
+      <option value="0">初级 (9x9, 10 寿司)</option>
+      <option value="1">中级 (16x16, 40 寿司)</option>
+      <option value="2">高级 (16x30, 99 寿司)</option>
+    </select>
+    <button id="start-button">开始/重置游戏</button>
+    <button id="custom-button">自定义模式</button>
+    <button id="record-button">排行榜</button>
+    <div>
+      <span>剩余寿司数: <span id="mine-counter">0</span></span>
+      &nbsp;&nbsp;&nbsp;
+      <span>计时: <span id="timer">0:0</span></span>
     </div>
   </div>
-
-  <!-- Vue 应用逻辑 -->
+  <div id="board"></div>
+  <div id="help">
+    <p>提示：左键点击翻开格子；右键或长按插旗（移动端支持）；空格键或点击“开始/重置游戏”重置。</p>
+  </div>
+  <!-- 可选音效（需提供对应音频文件） -->
+  <audio id="sound-click" src="click.mp3" preload="auto"></audio>
+  <audio id="sound-explosion" src="explosion.mp3" preload="auto"></audio>
   <script>
-    const { createApp } = Vue;
-    createApp({
-      data() {
-        return {
-          isDark: false,
-          selectedDate: new Date().toISOString().split('T')[0],
-          tasks: {
-            dog: [
-              { id: 1, title: '散步', date: '2025-03-11', plannedTime: '19:00', priority: '中', note: '晚上一起散步', completed: false },
-              { id: 2, title: '晚餐约会', date: '2025-03-11', plannedTime: '20:00', priority: '高', note: '预约日料', completed: false }
-            ],
-            cat: [
-              { id: 3, title: '购买礼物', date: '2025-03-11', plannedTime: '18:30', priority: '高', note: '给对方一个惊喜', completed: false },
-              { id: 4, title: '整理房间', date: '2025-03-10', plannedTime: '16:00', priority: '低', note: '', completed: false }
-            ]
-          },
-          newTask: {
-            dog: { title: '', date: new Date().toISOString().split('T')[0], plannedTime: '', priority: '', note: '' },
-            cat: { title: '', date: new Date().toISOString().split('T')[0], plannedTime: '', priority: '', note: '' }
-          }
-        };
-      },
-      methods: {
-        filteredTasks(side) {
-          return this.tasks[side].filter(task => {
-            if (task.date === this.selectedDate) return true;
-            if (task.date < this.selectedDate && !task.completed) return true;
-            return false;
+    // 全局变量与常量
+    let boardElement = document.getElementById('board');
+    let difficultySelect = document.getElementById('difficulty');
+    let startButton = document.getElementById('start-button');
+    let customButton = document.getElementById('custom-button');
+    let recordButton = document.getElementById('record-button');
+    let mineCounterElement = document.getElementById('mine-counter');
+    let timerElement = document.getElementById('timer');
+    let timerInterval = null;
+    let timeCount = 0;
+    
+    let rows, cols, mineCount;
+    let board = [];    // 二维数组存储每个格子的 DOM 元素
+    let mineMap = [];  // 二维数组存储雷区数据，'*'表示雷，其它数字表示周围雷数
+    let revealedCount = 0;
+    let gameOver = false;
+    const directions = [
+      [-1,-1], [-1,0], [-1,1],
+      [0,-1],          [0,1],
+      [1,-1],  [1,0],  [1,1]
+    ];
+    
+    // 根据难度设置行数、列数及寿司数（即雷数）
+    function setDifficulty(level) {
+      switch (parseInt(level)) {
+        case 0:
+          rows = 9; cols = 9; mineCount = 10;
+          break;
+        case 1:
+          rows = 16; cols = 16; mineCount = 40;
+          break;
+        case 2:
+          rows = 16; cols = 30; mineCount = 99;
+          break;
+        default:
+          rows = 9; cols = 9; mineCount = 10;
+      }
+      mineCounterElement.textContent = mineCount;
+    }
+    
+    // 启动计时器
+    function startTimer() {
+      clearInterval(timerInterval);
+      timeCount = 0;
+      timerElement.textContent = "0:0";
+      timerInterval = setInterval(() => {
+        timeCount++;
+        let minutes = Math.floor(timeCount / 60);
+        let seconds = timeCount % 60;
+        timerElement.textContent = minutes + ":" + seconds;
+      }, 1000);
+    }
+    
+    // 停止计时器
+    function stopTimer() {
+      clearInterval(timerInterval);
+    }
+    
+    // 重置游戏：初始化棋盘、数据、计时器
+    function resetGame() {
+      stopTimer();
+      boardElement.innerHTML = "";
+      board = [];
+      mineMap = [];
+      revealedCount = 0;
+      gameOver = false;
+      setDifficulty(difficultySelect.value);
+      // 根据列数设置棋盘宽高（每个格子22px含边框间隙）
+      boardElement.style.width = (cols * 22) + "px";
+      boardElement.style.height = (rows * 22) + "px";
+      boardElement.style.gridTemplateColumns = `repeat(${cols}, 20px)`;
+      boardElement.style.gridTemplateRows = `repeat(${rows}, 20px)`;
+      
+      // 创建棋盘
+      for (let r = 0; r < rows; r++) {
+        board[r] = [];
+        mineMap[r] = [];
+        for (let c = 0; c < cols; c++) {
+          let cell = document.createElement('div');
+          cell.classList.add('cell');
+          cell.dataset.row = r;
+          cell.dataset.col = c;
+          cell.addEventListener('click', cellClick);
+          cell.addEventListener('contextmenu', cellRightClick);
+          // 移动端：长按标记
+          let touchTimer = null;
+          cell.addEventListener('touchstart', (e) => {
+            if (gameOver) return;
+            touchTimer = setTimeout(() => {
+              cellRightClick(e);
+            }, 600);
           });
-        },
-        addTask(side) {
-          const nt = this.newTask[side];
-          if (!nt.title.trim() || !nt.date) return;
-          const newTaskItem = {
-            id: Date.now(),
-            title: nt.title,
-            date: nt.date,
-            plannedTime: nt.plannedTime,
-            priority: nt.priority,
-            note: nt.note,
-            completed: false
-          };
-          this.tasks[side].push(newTaskItem);
-          this.newTask[side] = { title: '', date: this.selectedDate, plannedTime: '', priority: '', note: '' };
-        },
-        completeTask(side, index) {
-          const task = this.tasks[side][index];
-          if (task.completed) {
-            this.triggerCompletionAnimation(side);
-          }
-        },
-        triggerCompletionAnimation(side) {
-          const emojiChar = side === 'dog' ? '🐶' : '🐱';
-          const emojiEl = document.createElement('div');
-          emojiEl.textContent = emojiChar;
-          emojiEl.style.position = 'absolute';
-          emojiEl.style.bottom = '20px';
-          emojiEl.style.right = '20px';
-          emojiEl.style.fontSize = '2rem';
-          emojiEl.style.opacity = '0';
-          const container = side === 'dog' ? this.$refs.dogColumn : this.$refs.catColumn;
-          container.appendChild(emojiEl);
-          gsap.to(emojiEl, {
-            y: -80,
-            opacity: 1,
-            duration: 0.5,
-            yoyo: true,
-            repeat: 1,
-            onComplete: () => {
-              container.removeChild(emojiEl);
-            }
+          cell.addEventListener('touchend', (e) => {
+            clearTimeout(touchTimer);
           });
-        },
-        completionRate(side) {
-          const list = this.tasks[side];
-          if (!list.length) return 0;
-          const doneCount = list.filter(t => t.completed).length;
-          return Math.round((doneCount / list.length) * 100);
-        },
-        toggleDarkMode() {
-          this.isDark = !this.isDark;
-          if (this.isDark) {
-            document.documentElement.classList.add('dark');
-            localStorage.setItem('theme', 'dark');
-          } else {
-            document.documentElement.classList.remove('dark');
-            localStorage.setItem('theme', 'light');
-          }
-        }
-      },
-      mounted() {
-        const savedTasks = localStorage.getItem('tasks');
-        if (savedTasks) {
-          try {
-            this.tasks = JSON.parse(savedTasks);
-          } catch (e) {
-            console.error('任务数据解析错误', e);
-          }
-        }
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme === 'dark') {
-          this.isDark = true;
-          document.documentElement.classList.add('dark');
-        }
-      },
-      watch: {
-        tasks: {
-          handler(newVal) {
-            localStorage.setItem('tasks', JSON.stringify(newVal));
-          },
-          deep: true
+          boardElement.appendChild(cell);
+          board[r][c] = cell;
+          mineMap[r][c] = 0;
         }
       }
-    }).mount('#app');
+    }
+    
+    // 生成雷区（保证首次点击安全）
+    function generateMines(firstRow, firstCol) {
+      let placed = 0;
+      while (placed < mineCount) {
+        let r = Math.floor(Math.random() * rows);
+        let c = Math.floor(Math.random() * cols);
+        if ((r === firstRow && c === firstCol) || mineMap[r][c] === '*') continue;
+        mineMap[r][c] = '*';
+        placed++;
+      }
+      // 根据雷区生成数字提示
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (mineMap[r][c] === '*') continue;
+          let count = 0;
+          for (let [dr, dc] of directions) {
+            let nr = r + dr, nc = c + dc;
+            if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && mineMap[nr][nc] === '*') {
+              count++;
+            }
+          }
+          mineMap[r][c] = count;
+        }
+      }
+    }
+    
+    // 返回与主题相关的雷 emoji（仅使用猫和寿司）
+    function getMineEmoji() {
+      return Math.random() > 0.5 ? "🐱" : "🍣";
+    }
+    
+    // 根据数字返回对应颜色的 class 名（仿扫雷经典）
+    function getNumberClass(num) {
+      switch (num) {
+        case 1: return "num-1";
+        case 2: return "num-2";
+        case 3: return "num-3";
+        case 4: return "num-4";
+        case 5: return "num-5";
+        case 6: return "num-6";
+        case 7: return "num-7";
+        case 8: return "num-8";
+        default: return "";
+      }
+    }
+    
+    // 左键点击：翻开格子
+    function cellClick(e) {
+      if (gameOver) return;
+      let cell = e.currentTarget;
+      let r = parseInt(cell.dataset.row);
+      let c = parseInt(cell.dataset.col);
+      if (revealedCount === 0) {
+        generateMines(r, c);
+        startTimer();
+      }
+      if (cell.classList.contains('flag')) return;
+      revealCell(r, c);
+      checkWin();
+    }
+    
+    // 右键点击或长按：标记/取消标记
+    function cellRightClick(e) {
+      e.preventDefault();
+      if (gameOver) return;
+      let cell = e.currentTarget;
+      if (cell.classList.contains('revealed')) return;
+      if (cell.classList.contains('flag')) {
+        cell.classList.remove('flag');
+        cell.textContent = "";
+        mineCounterElement.textContent = parseInt(mineCounterElement.textContent) + 1;
+      } else {
+        cell.classList.add('flag');
+        cell.textContent = "🐾"; // 使用可爱的爪印作为旗帜
+        mineCounterElement.textContent = parseInt(mineCounterElement.textContent) - 1;
+      }
+    }
+    
+    // 翻开格子（递归展开空白区域）
+    function revealCell(r, c) {
+      if (r < 0 || r >= rows || c < 0 || c >= cols) return;
+      let cell = board[r][c];
+      if (cell.classList.contains('revealed') || cell.classList.contains('flag')) return;
+      cell.classList.add('revealed');
+      revealedCount++;
+      // 可选：播放点击音效
+      // document.getElementById('sound-click').play();
+      if (mineMap[r][c] === '*') {
+        cell.classList.add('mine');
+        cell.textContent = getMineEmoji();
+        gameOverFn(false);
+      } else if (mineMap[r][c] > 0) {
+        cell.classList.add('number');
+        cell.textContent = mineMap[r][c];
+        cell.classList.add(getNumberClass(mineMap[r][c]));
+      } else {
+        // 空白区域，递归展开相邻格子
+        for (let [dr, dc] of directions) {
+          revealCell(r + dr, c + dc);
+        }
+      }
+    }
+    
+    // 游戏结束：显示所有雷、禁用交互、弹窗提示
+    function gameOverFn(win) {
+      gameOver = true;
+      stopTimer();
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          let cell = board[r][c];
+          if (mineMap[r][c] === '*' && !cell.classList.contains('revealed')) {
+            cell.classList.add('mine');
+            cell.textContent = getMineEmoji();
+          }
+          cell.removeEventListener('click', cellClick);
+          cell.removeEventListener('contextmenu', cellRightClick);
+        }
+      }
+      // 可选：播放爆炸音效
+      // document.getElementById('sound-explosion').play();
+      setTimeout(() => {
+        alert(win ? "恭喜你！你赢了！" : "游戏失败！");
+      }, 200);
+    }
+    
+    // 检查胜利条件
+    function checkWin() {
+      if (revealedCount === rows * cols - mineCount) {
+        gameOverFn(true);
+      }
+    }
+    
+    // 自定义模式：弹出输入提示，允许玩家设置行数、列数和雷数
+    customButton.addEventListener('click', () => {
+      let customRows = parseInt(prompt("请输入行数 (建议范围: 5-30):", "16"));
+      let customCols = parseInt(prompt("请输入列数 (建议范围: 5-50):", "30"));
+      let customMines = parseInt(prompt("请输入寿司数 (建议范围: 5 至 行数×列数-1):", "99"));
+      if (customRows && customCols && customMines && customMines < customRows * customCols) {
+        rows = customRows;
+        cols = customCols;
+        mineCount = customMines;
+        mineCounterElement.textContent = mineCount;
+        resetGame();
+      } else {
+        alert("输入不合法，请重试！");
+      }
+    });
+    
+    // 排行榜按钮（目前为占位功能）
+    recordButton.addEventListener('click', () => {
+      alert("排行榜功能待开发！");
+    });
+    
+    // 开始/重置按钮与空格键绑定重置游戏
+    startButton.addEventListener('click', resetGame);
+    window.addEventListener('keydown', (e) => {
+      if (e.key === ' ' && !gameOver) {
+        e.preventDefault();
+        resetGame();
+      }
+    });
+    
+    // 页面加载完成后初始化游戏
+    window.addEventListener('load', resetGame);
   </script>
 </body>
 </html>
